@@ -3,6 +3,7 @@ import { Construct } from "constructs";
 import { NetworkFirewallRuleGroup5Tuple } from "./network-firewall-rule-group-5-tuple";
 import { NetworkFirewallPolicy } from "./network-firewall-policy";
 import { NetworkFirewallLogs } from "./network-firewall-logs";
+import { NetworkFirewallRouting } from "./network-firewall-routing";
 
 export interface NetworkFirewallProps {
   vpc: cdk.aws_ec2.IVpc;
@@ -61,55 +62,10 @@ export class NetworkFirewall extends Construct {
       networkFirewall,
     });
 
-    // Routing NAT Gateway to Network Firewall
-    props.vpc.publicSubnets.forEach((publicSubnet, index) => {
-      const az = publicSubnet.availabilityZone;
-
-      const destinationSubnets = props.vpc.selectSubnets({
-        subnetGroupName: "Egress",
-        availabilityZones: [az],
-      }).subnets;
-
-      destinationSubnets.forEach((destinationSubnet) => {
-        const destinationCidrBlock = destinationSubnet.ipv4CidrBlock;
-
-        new cdk.aws_ec2.CfnRoute(
-          this,
-          `Route Nat Gateway To Network Firewall ${destinationCidrBlock}`,
-          {
-            routeTableId: publicSubnet.routeTable.routeTableId,
-            destinationCidrBlock,
-            vpcEndpointId: cdk.Fn.select(
-              1,
-              cdk.Fn.split(
-                ":",
-                cdk.Fn.select(index, networkFirewall.attrEndpointIds)
-              )
-            ),
-          }
-        );
-      });
+    // Network Firewall Routing
+    new NetworkFirewallRouting(this, "Network Firewall Routing", {
+      networkFirewall,
+      vpc: props.vpc,
     });
-
-    // Routing Egress Subnet to Network Firewall
-    props.vpc
-      .selectSubnets({ subnetGroupName: "Egress" })
-      .subnets.forEach((subnet, index) => {
-        const defaultRoute = subnet.node.children.find(
-          (child) => child.node.id == "DefaultRoute"
-        ) as cdk.aws_ec2.CfnRoute;
-        defaultRoute.addDeletionOverride("Properties.NatGatewayId");
-
-        defaultRoute.addOverride(
-          "Properties.VpcEndpointId",
-          cdk.Fn.select(
-            1,
-            cdk.Fn.split(
-              ":",
-              cdk.Fn.select(index, networkFirewall.attrEndpointIds)
-            )
-          )
-        );
-      });
   }
 }

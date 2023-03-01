@@ -2,6 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { NetworkFirewallRuleGroup5Tuple } from "./network-firewall-rule-group-5-tuple";
 import { NetworkFirewallPolicy } from "./network-firewall-policy";
+import { NetworkFirewallLogs } from "./network-firewall-logs";
 
 export interface NetworkFirewallProps {
   vpc: cdk.aws_ec2.IVpc;
@@ -10,15 +11,6 @@ export interface NetworkFirewallProps {
 export class NetworkFirewall extends Construct {
   constructor(scope: Construct, id: string, props: NetworkFirewallProps) {
     super(scope, id);
-
-    // Cloud Watch Logs Network Firewall alert logs
-    const networkFirewallAlertLogGroup = new cdk.aws_logs.LogGroup(
-      this,
-      "Network Firewall Alert Log Group",
-      {
-        retention: cdk.aws_logs.RetentionDays.ONE_WEEK,
-      }
-    );
 
     // Network Firewall rule group
     const networkFirewallRuleGroup5Tuple = new NetworkFirewallRuleGroup5Tuple(
@@ -65,24 +57,9 @@ export class NetworkFirewall extends Construct {
     );
 
     // Network Firewall logs
-    new cdk.aws_networkfirewall.CfnLoggingConfiguration(
-      this,
-      "Network Firewall Logs",
-      {
-        firewallArn: networkFirewall.ref,
-        loggingConfiguration: {
-          logDestinationConfigs: [
-            {
-              logDestination: {
-                logGroup: networkFirewallAlertLogGroup.logGroupName,
-              },
-              logDestinationType: "CloudWatchLogs",
-              logType: "ALERT",
-            },
-          ],
-        },
-      }
-    );
+    new NetworkFirewallLogs(this, "Network Firewall Logs", {
+      networkFirewall,
+    });
 
     // Routing NAT Gateway to Network Firewall
     props.vpc.publicSubnets.forEach((publicSubnet, index) => {

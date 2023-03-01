@@ -26,10 +26,6 @@ export class NetworkFirewallStack extends cdk.Stack {
       vpc: vpc.vpc,
       iamRole: ssmSessionManager.iamRole,
     });
-    new Ec2Instance(this, "Ec2 Instance B", {
-      vpc: vpc.vpc,
-      iamRole: ssmSessionManager.iamRole,
-    });
 
     // Network Firewall
     new NetworkFirewall(this, "Network Firewall", {

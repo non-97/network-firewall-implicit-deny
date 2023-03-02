@@ -1,0 +1,2 @@
+pass http $HOME_NET any -> $EXTERNAL_NET 80 (http.host; dotprefix; content:"dev.classmethod.jp"; endswith; msg:"Allowed HTTP domain"; sid:892120; rev:1;)
+pass tcp $HOME_NET any <> $EXTERNAL_NET 80 (flow:not_established; sid:892191; rev:1;)
